@@ -18,6 +18,7 @@ use winit;
 pub use winit::WindowProxy;
 
 
+use std::cell::RefCell;
 use std::collections::VecDeque;
 use platform::PlatformSpecificWindowBuilderAttributes;
 
@@ -26,6 +27,7 @@ mod ffi;
 pub struct Window {
     context: ffi::EMSCRIPTEN_WEBGL_CONTEXT_HANDLE,
     winit_window: winit::Window,
+    events: RefCell<VecDeque<Event>>,
 }
 
 pub struct PollEventsIterator<'a> {
@@ -37,8 +39,10 @@ impl<'a> Iterator for PollEventsIterator<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Event> {
-        // TODO
-        None
+        match self.window.events.try_borrow_mut() {
+            Result::Ok(mut ref_events) => ref_events.pop_front(),
+            Result::Err(_) => None
+        }
     }
 }
 
@@ -94,11 +98,14 @@ impl Window {
             context
         };
 
+        // TODO: set up more event callbacks
+
         // TODO: emscripten_set_webglcontextrestored_callback
 
         Ok(Window {
             context: context,
-            winit_window: winit_window
+            winit_window: winit_window,
+            events: RefCell::new(VecDeque::new()),
         })
     }
 
@@ -154,9 +161,12 @@ impl Window {
 
     #[inline]
     pub fn wait_events(&self) -> WaitEventsIterator {
+        /*
         WaitEventsIterator {
             window: self,
         }
+        */
+        unimplemented!()
     }
 
     #[inline]

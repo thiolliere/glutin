@@ -15,6 +15,31 @@ pub type em_webgl_context_callback = extern fn(libc::c_int, *const libc::c_void,
 pub type em_callback_func = unsafe extern fn();
 
 #[repr(C)]
+pub struct EmscriptenMouseEvent {
+    pub timestamp: libc::c_double,
+    pub screen_x: libc::c_long,
+    pub screen_y: libc::c_long,
+    pub client_x: libc::c_long,
+    pub client_y: libc::c_long,
+    pub ctrl_key: EM_BOOL,
+    pub shift_key: EM_BOOL,
+    pub alt_key: EM_BOOL,
+    pub meta_key: EM_BOOL,
+    pub button: libc::c_ushort,
+    pub buttons: libc::c_ushort,
+    pub movement_x: libc::c_long,
+    pub movement_y: libc::c_long,
+    pub target_x: libc::c_long,
+    pub target_y: libc::c_long,
+    pub canvas_x: libc::c_long,
+    pub canvas_y: libc::c_long,
+    padding: libc::c_long
+}
+
+pub type em_mouse_callback_func = extern fn(libc::c_int, *const EmscriptenMouseEvent, *mut libc::c_void)
+    -> EM_BOOL;
+
+#[repr(C)]
 pub struct EmscriptenWebGLContextAttributes {
     pub alpha: EM_BOOL,
     pub depth: EM_BOOL,
@@ -83,4 +108,7 @@ extern {
     pub fn emscripten_sleep(delay: libc::c_uint);
 
     pub fn emscripten_set_main_loop(func : em_callback_func, fps : libc::c_int, simulate_infinite_loop : libc::c_int);
+
+    
+    pub fn emscripten_set_click_callback(target: *const libc::c_char, user_data: *mut libc::c_void, use_capture: EM_BOOL, callback: em_mouse_callback_func) -> EMSCRIPTEN_RESULT;
 }
