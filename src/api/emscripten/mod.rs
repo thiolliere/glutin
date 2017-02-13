@@ -1,5 +1,6 @@
 #![cfg(target_os = "emscripten")]
 
+
 use std::ffi::CString;
 use libc;
 use Api;
@@ -17,8 +18,12 @@ use WindowAttributes;
 use winit;
 pub use winit::WindowProxy;
 
+use ElementState;
+use MouseButton;
 
 use std::cell::RefCell;
+use std::ops::Deref;
+use std::borrow::BorrowMut;
 use std::collections::VecDeque;
 use platform::PlatformSpecificWindowBuilderAttributes;
 
@@ -27,7 +32,7 @@ mod ffi;
 pub struct Window {
     context: ffi::EMSCRIPTEN_WEBGL_CONTEXT_HANDLE,
     winit_window: winit::Window,
-    events: RefCell<VecDeque<Event>>,
+    events: Box<RefCell<VecDeque<Event>>>,
 }
 
 pub struct PollEventsIterator<'a> {
@@ -39,10 +44,7 @@ impl<'a> Iterator for PollEventsIterator<'a> {
 
     #[inline]
     fn next(&mut self) -> Option<Event> {
-        match self.window.events.try_borrow_mut() {
-            Result::Ok(mut ref_events) => ref_events.pop_front(),
-            Result::Err(_) => None
-        }
+        self.window.events.deref().borrow_mut().pop_front()
     }
 }
 
@@ -59,6 +61,49 @@ impl<'a> Iterator for WaitEventsIterator<'a> {
         None
     }
 }
+
+extern fn mouse_callback(
+        event_type: libc::c_int,
+        event: *const ffi::EmscriptenMouseEvent,
+        event_queue: *mut libc::c_void) -> ffi::EM_BOOL {
+    // println!("callback {} {:p} {:p} !", event_type, event, event_queue);
+    unsafe {
+        use std::mem;
+        let queue: &RefCell<VecDeque<Event>> = mem::transmute(event_queue);
+        match event_type {
+            ffi::EMSCRIPTEN_EVENT_MOUSEMOVE => {
+                queue.borrow_mut().push_back(Event::MouseMoved(
+                        (*event).client_x as i32,
+                        (*event).client_y as i32));
+            },
+            ffi::EMSCRIPTEN_EVENT_MOUSEDOWN => {
+                queue.borrow_mut().push_back(Event::MouseInput(
+                        ElementState::Pressed,
+                        match (*event).button {
+                            0 => MouseButton::Left,
+                            1 => MouseButton::Middle,
+                            2 => MouseButton::Right,
+                            other => MouseButton::Other(other as u8),
+                        }));
+            },
+            ffi::EMSCRIPTEN_EVENT_MOUSEUP => {
+                queue.borrow_mut().push_back(Event::MouseInput(
+                        ElementState::Released,
+                        match (*event).button {
+                            0 => MouseButton::Left,
+                            1 => MouseButton::Middle,
+                            2 => MouseButton::Right,
+                            other => MouseButton::Other(other as u8),
+                        }));
+            },
+            _ => {
+            }
+        }
+    }
+    ffi::EM_TRUE
+}
+
+const CANVAS_NAME: &'static str = "#canvas\0";
 
 impl Window {
     pub fn new(_: &WindowAttributes,
@@ -98,15 +143,35 @@ impl Window {
             context
         };
 
-        // TODO: set up more event callbacks
-
         // TODO: emscripten_set_webglcontextrestored_callback
 
-        Ok(Window {
+        let winit_window = try!(winit_builder.build());
+        let ret = Window {
             context: context,
             winit_window: winit_window,
-            events: RefCell::new(VecDeque::new()),
-        })
+            events: Box::new(RefCell::new(VecDeque::new())),
+        };
+
+        {
+            use std::mem;
+            // TODO: set up more event callbacks
+            unsafe {
+                ffi::emscripten_set_mousemove_callback(CANVAS_NAME.as_ptr(),
+                                              mem::transmute(ret.events.deref()),
+                                              0,
+                                              mouse_callback);
+                ffi::emscripten_set_mousedown_callback(CANVAS_NAME.as_ptr(),
+                                              mem::transmute(ret.events.deref()),
+                                              0,
+                                              mouse_callback);
+                ffi::emscripten_set_mouseup_callback(CANVAS_NAME.as_ptr(),
+                                              mem::transmute(ret.events.deref()),
+                                              0,
+                                              mouse_callback);
+            }
+        }
+
+        Ok(ret)
     }
 
     #[inline]

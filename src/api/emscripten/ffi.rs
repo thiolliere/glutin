@@ -4,6 +4,9 @@
 
 use libc;
 
+pub const EM_FALSE: EM_BOOL = 0;
+pub const EM_TRUE: EM_BOOL = 1;
+
 pub type EM_BOOL = libc::c_int;
 pub type EM_UTF8 = libc::c_char;
 pub type EMSCRIPTEN_WEBGL_CONTEXT_HANDLE = libc::c_int;
@@ -35,6 +38,11 @@ pub struct EmscriptenMouseEvent {
     pub canvas_y: libc::c_long,
     padding: libc::c_long
 }
+
+pub const EMSCRIPTEN_EVENT_CLICK: libc::c_int = 4;
+pub const EMSCRIPTEN_EVENT_MOUSEDOWN: libc::c_int = 5;
+pub const EMSCRIPTEN_EVENT_MOUSEUP: libc::c_int = 6;
+pub const EMSCRIPTEN_EVENT_MOUSEMOVE: libc::c_int = 8;
 
 pub type em_mouse_callback_func = extern fn(libc::c_int, *const EmscriptenMouseEvent, *mut libc::c_void)
     -> EM_BOOL;
@@ -110,5 +118,9 @@ extern {
     pub fn emscripten_set_main_loop(func : em_callback_func, fps : libc::c_int, simulate_infinite_loop : libc::c_int);
 
     
-    pub fn emscripten_set_click_callback(target: *const libc::c_char, user_data: *mut libc::c_void, use_capture: EM_BOOL, callback: em_mouse_callback_func) -> EMSCRIPTEN_RESULT;
+    pub fn emscripten_set_mousemove_callback(target: *const libc::c_char, user_data: *mut libc::c_void, use_capture: EM_BOOL, callback: em_mouse_callback_func) -> EMSCRIPTEN_RESULT;
+
+    pub fn emscripten_set_mousedown_callback(target: *const libc::c_char, user_data: *mut libc::c_void, use_capture: EM_BOOL, callback: em_mouse_callback_func) -> EMSCRIPTEN_RESULT;
+
+    pub fn emscripten_set_mouseup_callback(target: *const libc::c_char, user_data: *mut libc::c_void, use_capture: EM_BOOL, callback: em_mouse_callback_func) -> EMSCRIPTEN_RESULT;
 }
