@@ -145,7 +145,6 @@ impl Window {
 
         // TODO: emscripten_set_webglcontextrestored_callback
 
-        let winit_window = try!(winit_builder.build());
         let ret = Window {
             context: context,
             winit_window: winit_window,
