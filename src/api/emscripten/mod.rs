@@ -323,12 +323,15 @@ impl Window {
 
     #[inline]
     pub fn get_inner_size_points(&self) -> Option<(u32, u32)> {
-        unimplemented!()
+        self.get_inner_size()
     }
 
     #[inline]
     pub fn get_inner_size_pixels(&self) -> Option<(u32, u32)> {
-        self.get_inner_size()
+        self.get_inner_size().map(|(x, y)| {
+            let hidpi = self.hidpi_factor();
+            ((x as f32 * hidpi) as u32, (y as f32 * hidpi) as u32)
+        })
     }
 
     #[inline]
