@@ -313,7 +313,7 @@ impl Window {
 
     #[inline]
     pub fn hidpi_factor(&self) -> f32 {
-        unsafe { ffi::emscripten_get_device_pixel_ratio() as f32 }
+        1f32
     }
 
     #[inline]
